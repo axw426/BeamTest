@@ -2,6 +2,8 @@ from Event import EventData
 import statistics 
 import matplotlib.pyplot as plt
 from pathlib import Path
+import matplotlib
+matplotlib.use('agg') 
 
 #plots we want
 # - histogram of strips fired in each layer -DONE
@@ -39,6 +41,12 @@ class PlotHandler():
         self.nClocks=0
         
         self.outputDirectory="Plots"
+
+        self.dpi=500
+        self.imageSize=()
+        self.imageWidth=400
+        self.dpi=144*10
+        self.figsize=(500*10/self.dpi, 500*10/self.dpi)
 
     def SetOutputDirectory(self,newPath):
         Path(newPath).mkdir(parents=True, exist_ok=True)
@@ -120,10 +128,12 @@ class PlotHandler():
         for i,value in enumerate(self.meanModuleHitPos):
             print(i,value)
 
-    def PlotStripData(self,layer: int):
-        fig, ax = plt.subplots( nrows=1, ncols=1 )  # create figure & 1 axis
-        ax.hist(self.stripAddresses[layer],bins=[x-0.5 for x in range(1536)])
-        fig.savefig(f'{self.outputDirectory}/StipHits_{layer}.png')   # save the figure to file
+    def PlotStripData(self):
+        fig=plt.figure(figsize=self.figsize,dpi=self.dpi)
+        for layer in range(16):
+            plt.hist(self.stripAddresses[layer],bins=[x-0.5 for x in range(1536)])
+            fig.savefig(f'{self.outputDirectory}/StipHits_{layer}.pdf',dpi=self.dpi)   # save the figure to file
+            plt.clf()
         plt.close(fig)
     
     def PlotHitPos(self,section:str,module:int):
@@ -139,13 +149,15 @@ class PlotHandler():
         
         xBins=range(-180,180,1)
         yBins=range(-180,180,1)
-        fig, ax = plt.subplots( nrows=1, ncols=1 )  # create figure & 1 axis
+        fig=plt.figure(figsize=self.figsize,dpi=self.dpi)
         x=[i[0] for i in data]
         y=[i[1] for i in data]
-        ax.hist2d(x,y,bins=[xBins,yBins])
+        plt.hist2d(x,y,bins=[xBins,yBins])
         if(len(data)>0):
-            plt.text(-150, 130, f"Mean ({statistics.fmean(x):.3f},{statistics.fmean(x):.3f})\nStdev ({statistics.stdev(x):.3f},{statistics.stdev(x):.3f})  ")
-        fig.savefig(f'{self.outputDirectory}/HitMap_{section}_{module}.png')   # save the figure to file
+            plt.text(-150, 130, f"Mean ({statistics.fmean(x):.3f},{statistics.fmean(x):.3f})\nStdev ({statistics.stdev(x):.3f},{statistics.stdev(x):.3f})", color="white")
+        plt.xlabel("Strip Address")
+        plt.ylabel("Counts")
+        fig.savefig(f'{self.outputDirectory}/HitMap_{section}_{module}.png',dpi=self.dpi)   # save the figure to file
         plt.close(fig)
 
     def PlotHitsPerClock(self,section:str,module:int):
@@ -160,13 +172,18 @@ class PlotHandler():
             return 1
     
         fig, ax = plt.subplots( nrows=1, ncols=1 )  # create figure & 1 axis
-        ax.hist(data,bins=[x-0.5 for x in range(30)])
-        fig.savefig(f'{self.outputDirectory}/HitsPerClock_{section}_{module}.png')   # save the figure to file
+        fig=plt.figure(figsize=self.figsize,dpi=self.dpi)
+        plt.hist(data,bins=[x-0.5 for x in range(30)])
+        fig.savefig(f'{self.outputDirectory}/HitsPerClock_{section}_{module}.png',dpi=self.dpi)   # save the figure to file
+        plt.xlabel("X Position (mm)")
+        plt.ylabel("Y Position (mm)")
         plt.close(fig)
 
     def PlotStripsPerClock(self,layer: int):
 
-        fig, ax = plt.subplots( nrows=1, ncols=1 )  # create figure & 1 axis
-        ax.hist(self.nStripHits[layer],bins=[x-0.5 for x in range(30)])
-        fig.savefig(f'{self.outputDirectory}/StripsPerClock_{layer}.png')   # save the figure to file
+        fig=plt.figure(figsize=self.figsize,dpi=self.dpi)
+        plt.hist(self.nStripHits[layer],bins=[x-0.5 for x in range(30)])
+        fig.savefig(f'{self.outputDirectory}/StripsPerClock_{layer}.png',dpi=self.dpi)   # save the figure to file
         plt.close(fig)
+
+       
