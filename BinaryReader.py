@@ -15,6 +15,7 @@ class FileReader:
 
         nInts=(self.nHitsPerLayer*self.nTrackers*self.nLayersPerTracker)
         self.lengthOfEntry=2*(nInts)+2*(nCaloBins)+4*3+4
+        #print("LoE",self.lengthOfEntry)
         
         self.event=0
 

@@ -1,257 +1,270 @@
-import tkinter as tk
-from tkinter import filedialog
-from tkinter import ttk
-import subprocess
+
+import sys
+import time
+import os
+
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtWidgets import QFileDialog, QMenu, QFrame, QGridLayout, QLineEdit, QPushButton, QHBoxLayout, QSpacerItem, QVBoxLayout, QApplication, QMainWindow, QWidget, QAction, QTabWidget, QLabel
+from PyQt5.QtGui import QIcon
+from PyQt5 import QtGui
+from PyQt5.QtCore import QFile, QTextStream, pyqtSignal
+
+from qtHelpers import *
+from BinaryReader import FileReader
+from Plotter import PlotHandler
 from pathlib import Path
-import ctypes
-ctypes.windll.shcore.SetProcessDpiAwareness(2)
 
-window = tk.Tk()
-#root.state("zoomed")
-w, h = window.maxsize()
-window.geometry(f'{w}x{h}+0+0')
-window.title("OPTIma Beam Test") 
+class BeamTestUi(QMainWindow):
 
-#create tabs
-tabControl = ttk.Notebook(window)
-root = ttk.Frame(tabControl)
-stripHitsTab = ttk.Frame(tabControl)
+    def __init__(self):
+        """View initializer."""
+        super().__init__()
 
-tabControl.add(root, text='Configure')
-tabControl.add(stripHitsTab, text='Strip Hit Plots')
-tabControl.pack(expand=1, fill="both")
+        # Set some main window's properties
+        self.setWindowTitle('OPTIma Beam Test')
+        #self.setWindowIcon(QtGui.QIcon("Images/5eEmblem.png"))
+        
+        # Set up the central widget 
+        self.widget = QWidget()                 # Widget that contains the collection of Vertical Box
+        self.widget.setMaximumWidth(QApplication.primaryScreen().size().width()) #set maximum display width to be screen size to avoid scrolling
 
-#globals
-plotScale=11
+        self.fileName=""
 
+        #create tabs
+        self.tabs = QTabWidget()
+        self.stripsTab = QWidget()
+        self.moduleTab = QWidget()
+        self.timingTab = QWidget() 
 
-def open_file_dialog():
-    runButton.config(bg="red")
-    file_path = filedialog.askopenfilename(title="Select a File", filetypes=[("Binary File", "*.bin"), ("All files", "*.*")])
-    if file_path:
-        print("FilePath=",file_path)
-        fileValue.config(text=file_path)
-        UpdatePlots(0)
+        # Add tabs
+        self.tabs.addTab(self.stripsTab,"Strip Hits")
+        self.tabs.addTab(self.moduleTab,"Module Hits")
+        self.tabs.addTab(self.timingTab,"Timing Info")
+  
+        self.generalLayout = QGridLayout()
+        self.widget.setLayout(self.generalLayout)
+        self.timingTabLayout = QGridLayout()
+        self.timingTab.setLayout(self.timingTabLayout)
+        self.stripTabLayout = QGridLayout()
+        self.stripsTab.setLayout(self.stripTabLayout)
+        self.moduleTabLayout = QGridLayout()
+        self.moduleTab.setLayout(self.moduleTabLayout) 
 
-def analyseData():
-    runButton.config(bg="orange")
-    runStatusLabel.config(text="Running...")
-    runStatusLabel.config(text="Running")
-
-    maxEvents=maxEventsValue.get("1.0","end-1c")
-    nSkips=skipEventsValue.get("1.0","end-1c")
-    print(fileValue["text"],maxEvents,nSkips)
-
-    myProcess=subprocess.run(['python', 'ProcessData.py', "-f", fileValue["text"], "-max",maxEvents,"-s",nSkips],capture_output=True)
-    if myProcess.returncode==0:
-        runStatusLabel.config(text="Finished!")
-        runButton.config(bg="green")
-        UpdatePlots(0)
-
-    else:
-        runStatusLabel.config(text="FAILED")
-        runButton.config(bg="red")
+        self.setCentralWidget(self.widget)
+        
+        # Create all sections
+        self.CreateMenuBar()
+        self.CreateOptions()
+        self.CreateTimingTab()
+        self.CreateStripsTab()
+        self.CreateModulesTab()
 
 
-def UpdateChoices(i):
-    if i==1:
-        index=plotTypeValue1.current()
-        plotChoiceValue1["values"]=choices[index]
-        plotChoiceValue1.current(0)
-    elif i==2:
-        index=plotTypeValue2.current()
-        plotChoiceValue2["values"]=choices[index]
-        plotChoiceValue2.current(0)
-    elif i==3:
-        index=plotTypeValue3.current()
-        plotChoiceValue3["values"]=choices[index]
-        plotChoiceValue3.current(0)
-
-def UpdatePlots(args):
-    baseName=Path(fileValue["text"]).stem
-
-    type=plotTypeNames[plotTypeValue1.current()]
-    choice=plotChoiceValue1.current()
-    newPlotFile=f"./Plots/{baseName}/{type}{choice}.png"
-    newPlot=tk.PhotoImage(file=newPlotFile)
-    newPlot=newPlot.subsample(plotScale)
-    plot1.configure(image=newPlot)
-    plot1.image=newPlot
-
-    type=plotTypeNames[plotTypeValue2.current()]
-    choice=plotChoiceValue2.current()
-    newPlotFile=f"./Plots/{baseName}/{type}{choice}.png"
-    newPlot=tk.PhotoImage(file=newPlotFile)
-    newPlot=newPlot.subsample(plotScale)
-    plot2.configure(image=newPlot)
-    plot2.image=newPlot
-
-    type=plotTypeNames[plotTypeValue3.current()]
-    choice=plotChoiceValue3.current()
-    newPlotFile=f"./Plots/{baseName}/{type}{choice}.png"
-    newPlot=tk.PhotoImage(file=newPlotFile)
-    newPlot=newPlot.subsample(plotScale)
-    plot3.configure(image=newPlot)
-    plot3.image=newPlot
-
-#top left: settings
-settingsY=20
-settingsX=5
-settingsLabel=tk.Label(root,text="Settings",font='Helvetica 18 bold')
-settingsLabel.place(x=settingsX+0,y=settingsY-20)
-
-#select file
-file_path=""
-openButton = tk.Button(root, text="Select File", command=open_file_dialog)
-fileValue=tk.Label(root,text=file_path,background="white", width=40)
-openButton.place (x=settingsX+0,y=settingsY+30)
-fileValue.place(x=settingsX+120,y=settingsY+32)
-
-#set maximum entries
-maxEventsLabel=tk.Label(root,text="Maximum N Cycles")
-maxEventsValue=tk.Text(root, height=1, width=29)
-maxEventsValue.insert(tk.END,"10000")
-maxEventsLabel.place (x=settingsX+0,y=settingsY+80)
-maxEventsValue.place(x=settingsX+172,y=settingsY+80)
-
-#set events to skip
-skipEventsLabel=tk.Label(root,text="N Cycles To Skip")
-skipEventsValue=tk.Text(root, height=1, width=29)
-skipEventsValue.insert(tk.END,"0")
-skipEventsLabel.place (x=settingsX+00,y=settingsY+120)
-skipEventsValue.place(x=settingsX+172,y=settingsY+120)
-
-#run analysis
-runButton = tk.Button(root,
-    text="Analyse File",
-    width=10,
-    height=1,
-    bg="red",
-    fg="black",
-    activebackground="orange",
-    command=analyseData
-)
-runButton.place(x=settingsX+175,y=settingsY+162)
-runStatusLabel=tk.Label(root,text="")
-runStatusLabel.place(x=settingsX+300,y=settingsY+162)
-
-####### Plots #########
-plotsY=220
-plotsX=35
-plotsLabel=tk.Label(root,text="Plots",font='Helvetica 18 bold')
-plotsLabel.place(x=settingsX+0,y=settingsY+0)
-plotsLabel.place(x=plotsX-30,y=plotsY)
-
-plotTypes=["Strip Hits","XY Hit Map","UV Hit Map","Module Hit Map"]
-plotTypeNames=["StipHits_","HitMap_XY_","HitMap_UV_","HitMap_Module_"]
-choices=[]
-choices.append([i for i in range(16)])
-choices.append([i for i in range(4)])
-choices.append([i for i in range(4)])
-choices.append([i for i in range(4)])
-
-defaultPhoto = tk.PhotoImage(file=r'./Plots/noScintillator_output/StipHits_0.png')
-#defaultPhoto=defaultPhoto.zoom(2)
-defaultPhoto=defaultPhoto.subsample(plotScale)
-
-#Plot 1
-plotTypeLabel1=tk.Label(root,text="Plot Type")
-typeValue1 = tk.StringVar() 
-plotTypeValue1=ttk.Combobox(root,width=30,textvariable=typeValue1 )
-plotTypeValue1.bind("<<ComboboxSelected>>", lambda x: UpdateChoices(1))
-plotTypeValue1["values"]=plotTypes
-plotTypeValue1.current(0)
-
-plotChoiceLabel1=tk.Label(root,text="Layer/Module")
-choiceValue1=tk.StringVar()
-plotChoiceValue1=ttk.Combobox(root,width=30,textvariable=choiceValue1)
-plotChoiceValue1.bind("<<ComboboxSelected>>", UpdatePlots)
-plotChoiceValue1["values"]=choices[0]
-plotChoiceValue1.current(12)
-
-plotTypeLabel1.place(x=plotsX+0,y=plotsY+60)
-plotTypeValue1.place(x=plotsX+120,y=plotsY+60)
-plotChoiceLabel1.place(x=plotsX+0,y=plotsY+100)
-plotChoiceValue1.place(x=plotsX+120,y=plotsY+100)
-
-plot1 = tk.Label(root, image=defaultPhoto)
-plot1.place(x=plotsX+0,y=plotsY+160)
-
-#plot2
-plotTypeLabel2=tk.Label(root,text="Plot Type")
-typeValue2 = tk.StringVar() 
-plotTypeValue2=ttk.Combobox(root,width=30,textvariable=typeValue2 )
-plotTypeValue2.bind("<<ComboboxSelected>>", lambda x: UpdateChoices(2))
-plotTypeValue2["values"]=plotTypes
-plotTypeValue2.current(1)
-
-plotChoiceLabel2=tk.Label(root,text="Layer/Module")
-choiceValue2=tk.StringVar()
-plotChoiceValue2=ttk.Combobox(root,width=30,textvariable=choiceValue2)
-plotChoiceValue2.bind("<<ComboboxSelected>>", UpdatePlots)
-plotChoiceValue2["values"]=choices[0]
-plotChoiceValue2.current(3)
-
-plotTypeLabel2.place(x=plotsX+620,y=plotsY+60)
-plotTypeValue2.place(x=plotsX+740,y=plotsY+60)
-plotChoiceLabel2.place(x=plotsX+620,y=plotsY+100)
-plotChoiceValue2.place(x=plotsX+740,y=plotsY+100)
-
-plot2 = tk.Label(root, image=defaultPhoto)
-plot2.place(x=plotsX+620,y=plotsY+160)
-
-#plot3
-plotTypeLabel3=tk.Label(root,text="Plot Type")
-typeValue3 = tk.StringVar() 
-plotTypeValue3=ttk.Combobox(root,width=30,textvariable=typeValue3 )
-plotTypeValue3.bind("<<ComboboxSelected>>", lambda x: UpdateChoices(3))
-plotTypeValue3["values"]=plotTypes
-plotTypeValue3.current(3)
-
-plotChoiceLabel3=tk.Label(root,text="Layer/Module")
-choiceValue3=tk.StringVar()
-plotChoiceValue3=ttk.Combobox(root,width=30,textvariable=choiceValue3)
-plotChoiceValue3.bind("<<ComboboxSelected>>", UpdatePlots)
-plotChoiceValue3["values"]=choices[0]
-plotChoiceValue3.current(3)
-
-plotTypeLabel3.place(x=plotsX+1240,y=plotsY+60)
-plotTypeValue3.place(x=plotsX+1360,y=plotsY+60)
-plotChoiceLabel3.place(x=plotsX+1240,y=plotsY+100)
-plotChoiceValue3.place(x=plotsX+1360,y=plotsY+100)
-
-plot3 = tk.Label(root, image=defaultPhoto)
-plot3.place(x=plotsX+1240,y=plotsY+160)
+        self.generalLayout.addLayout(self.optionsLayout,0,0)
+        self.generalLayout.addWidget(self.tabs,1,0)
 
 
-def UpdateStripHits():
-    pass
+        #Maximise the window
+        self.showMaximized()
+    
+    def CreateMenuBar(self):
+        
+        #create menu bar
+        menuBar = self.menuBar()
+        fileMenu = QMenu("&File", self)
+        menuBar.addMenu(fileMenu)
 
-#stripHitPlots
-stripHitLabel=tk.Label(stripHitsTab,text="Strip Hits",font='Helvetica 18 bold')
-stripHitChoice=tk.Label(stripHitsTab,text="Module")
-choiceValue=tk.StringVar()
-stripChoiceValue=ttk.Combobox(stripHitsTab,width=30,textvariable=choiceValue)
-stripChoiceValue.bind("<<ComboboxSelected>>", UpdateStripHits)
-stripChoiceValue["values"]=choices[1]
-stripChoiceValue.current(0)
+        #create actions and add slots
+        #self.saveAction = QAction("&Save...", self)
 
-stripHitPlots=[]
-for i in range(4):
-    stripHitPlots.append(tk.Label(stripHitsTab, image=defaultPhoto))
+        #create actions and add slots
+        self.loadAction = QAction("&Open...", self)
+        self.loadAction.triggered.connect(self.loadFile)
+        
+        #add actions to menu bar
+        fileMenu.addAction(self.loadAction)
 
-stripHitLabel.place(x=5,y=0)
-stripHitChoice.place(x=120,y=15)
-stripChoiceValue.place(x=190,y=15)
+    def SetStatus(self,colour,text=None):
+        self.analyseButtom.setStyleSheet(f"background-color: {colour}")
+        if text is not None:
+            self.outputStatus.setText(text)
 
-imageWidth=defaultPhoto.width()
-xShift=(w-10)/(4)
-print(w,imageWidth,xShift)
-stripHitPlots[0].place(x=5,y=120)
-stripHitPlots[1].place(x=5+xShift,y=120)
-stripHitPlots[2].place(x=5+2*xShift,y=120)
-stripHitPlots[3].place(x=5+3*xShift,y=120)
+    def CreateOptions(self):
+        self.fileInput=LabelledEdit("File Name","")
+        self.fileInput.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
+        self.nEventsInFileLabel=QLabel("")
+        self.startInput=LabelledEdit("Starting Event","0")
+        self.startInput.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
+        self.maxEventsInput=LabelledEdit("Max Events (0=no max)","0")
+        self.maxEventsInput.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
+        self.refreshRate=LabelledEdit("Update plots every N events (0=end)","0")
+        self.refreshRate.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
+        self.selectFile=QPushButton("Select File",self)
+        self.selectFile.setMaximumWidth(100)
+        self.selectFile.clicked.connect(self.loadFile)
+
+        self.outputStatus=QLabel("Please select an input file")
+        self.analyseButtom=QPushButton("Run Analysis",self)
+        self.analyseButtom.setStyleSheet("border : 20px solid black;")
+        #self.analyseButtom.setMinimumSize(80,80)
+        #self.analyseButtom.setMaximumWidth(100)
+        self.SetStatus("red")
+        self.analyseButtom.clicked.connect(self.analyseData)
+
+        spacer=QSpacerItem(2000,10)
+
+        self.optionsLayout=QGridLayout()
+        self.optionsLayout.addLayout(self.fileInput.layout,0,0)
+        self.optionsLayout.addWidget(self.selectFile,0,1)
+        self.optionsLayout.addWidget(self.nEventsInFileLabel,1,1)
+        self.optionsLayout.addLayout(self.startInput.layout,1,0)
+        self.optionsLayout.addLayout(self.maxEventsInput.layout,0,3)
+        self.optionsLayout.addLayout(self.refreshRate.layout,1,3)
+        self.optionsLayout.addWidget(self.analyseButtom,0,5,2,2)
+        self.optionsLayout.addWidget(self.outputStatus,0,7,2,1)
+        #self.optionsLayout.addItem(spacer,0,2)
+
+        self.optionsLayout.setColumnMinimumWidth(2,80)
+        self.optionsLayout.setColumnStretch(8,10)
+
+    def CreateTimingTab(self):
+
+        #want some timing plots
+        #median number of hits as a function of time in  each module
+
+        pass
+
+        
+    def CreateStripsTab(self):
+        
+        self.stripPlots=[]
+        for i in range(16):
+            self.stripPlots.append(StripPlotObject())
+
+        for i in range(4):
+            label=QLabel(f"<b>Module {i}</b>")
+            label.setAlignment(Qt.AlignCenter)
+            self.stripTabLayout.addWidget(label,0,i+1)
+
+        for i,value in enumerate(["XY","YX","U","V"]):
+            label=QLabel(f"<b>{value}</b>")
+            label.setAlignment(Qt.AlignCenter)
+            self.stripTabLayout.addWidget(label,i+1,0)
 
 
+        for i in range(16):
+            self.stripTabLayout.addWidget(self.stripPlots[i].plot_graph,i%4+1,(int)(i/4)+1)
 
-window.mainloop()
+    def CreateModulesTab(self):
+        
+        self.hitTypeChoice=LabelledCombo("Hit Type",["Full Module","XY Only","UV Only"])
+        self.hitTypeChoice.value.currentIndexChanged.connect(self.UpdatePlots)
+
+        self.modulePlots=[]
+        for i in range(4):
+            self.modulePlots.append(ModulePlotObject(f"<b>Module {i}</b>"))
+        
+        #layout
+        self.moduleTabLayout.addLayout(self.hitTypeChoice.layout,0,1,1,2)
+        for i in range(4):
+            self.moduleTabLayout.addLayout(self.modulePlots[i].layout,(int)(i/2)+1,i%2+1)
+        self.moduleTabLayout.setRowStretch(0,5)
+        self.moduleTabLayout.setRowStretch(1,10)
+        self.moduleTabLayout.setRowStretch(2,10)
+  
+
+    def loadFile(self):
+
+        self.fileName = QFileDialog.getOpenFileName(self, 'Open File',filter="bin (*.bin);")[0]
+        self.fileInput.SetValue(self.fileName)
+
+        fSize=os.path.getsize(self.fileName)
+        headerSize=0
+        lengthOfEntry=200
+        self.nEventsInFile=(int)((fSize-headerSize)/lengthOfEntry)
+        self.nEventsInFileLabel.setText(f"Events in File= {self.nEventsInFile}")
+
+        print("Selected",self.fileName)
+    
+    def analyseData(self):
+
+        #print("Analysing Data")
+        start=time.time()
+
+        try:
+
+            self.fName=self.fileInput.GetValue()
+            self.start=(int)(self.startInput.GetValue())
+            self.maxEvents=(int)(self.maxEventsInput.GetValue())
+            refreshRateValue=(int)(self.refreshRate.GetValue())
+
+            self.SetStatus("orange",f"Running analysis, processed 0/{self.nEventsInFile-self.start}")
+
+
+            self.debug=False
+
+            #setup files
+            reader=FileReader(self.fName, self.start)
+            self.plotHandler=PlotHandler()
+            outputDir=Path(self.fName).stem
+            self.plotHandler.SetOutputDirectory("Plots/"+outputDir)
+
+            #loop over events
+            counter=0
+            for event in reader.GetNextEvent():
+                
+                if(self.debug):
+                    print("Event",counter)
+                    reader.event.Print()
+
+                self.plotHandler.AddEvent(reader.event)
+
+                if refreshRateValue>0 and counter%refreshRateValue==0:
+                    self.SetStatus("orange",f"Running analysis, processed {counter}/{self.nEventsInFile-self.start}")
+                    self.plotHandler.GetMeanValues()
+                    self.UpdatePlots()
+                    QApplication.processEvents() #updates GUI while in the loop
+
+                counter+=1
+                if(self.maxEvents>0 and counter>self.maxEvents):
+                    break
+
+            #Extract Useful Info
+            self.plotHandler.GetMeanValues()
+
+            print("Analysis took ",time.time()-start)
+            self.UpdatePlots()
+
+            self.SetStatus("green","Analysis complete!!")
+        except Exception as error:
+            print(error)
+            self.SetStatus("red","Analysis failed! Please check options are valid")
+
+    
+    def UpdatePlots(self):
+        
+        start=time.time()
+        for i in range(16):
+            self.stripPlots[i].Plot(self.plotHandler.GetStripHistogram(i))
+
+        for i in range(4):
+            self.modulePlots[i].Plot(self.plotHandler.GetModuleData(i,self.hitTypeChoice.GetValue()))
+
+        print("Updating plots took ",time.time()-start)
+
+# Client code
+def main():
+    """Main function."""
+    # Create an instance of QApplication
+    beamTest = QApplication(sys.argv)
+
+    # Show the GUI
+    view = BeamTestUi()
+    view.show()
+
+
+    # Execute the apps main loop
+    sys.exit(beamTest.exec_())
+
+if __name__ == '__main__':
+    main() 

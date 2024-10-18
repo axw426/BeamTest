@@ -3,6 +3,8 @@ import statistics
 import matplotlib.pyplot as plt
 from pathlib import Path
 import matplotlib
+import numpy as np
+
 matplotlib.use('agg') 
 
 #plots we want
@@ -80,6 +82,30 @@ class PlotHandler():
             for hit in module:
                 self.moduleHits[i].append(hit)
 
+
+    def GetStripHistogram(self,layer):
+        data=self.stripAddresses[layer]
+        y,x = np.histogram(data, bins=[x-0.5 for x in range(1536)])
+        return [x,y]
+    
+    def GetModuleData(self,module,hitType):
+        if(hitType=="XY Only"):
+            rawData=self.xyHits[module]
+            xData=[data[0] for data in rawData]
+            yData=[data[1] for data in rawData]
+        elif(hitType=="UV Only"):
+            rawData=self.uvHits[module]
+            xData=[data[0] for data in rawData]
+            yData=[data[1] for data in rawData]
+        if(hitType=="Full Module"):
+            rawData=self.moduleHits[module]
+            xData=[data[0] for data in rawData]
+            yData=[data[1] for data in rawData]
+
+        hist= np.histogram2d(xData, yData, bins=[360,60], range=[[-180,180],[-30,30]], density=None, weights=None)
+
+        return [hist,np.mean(xData),np.mean(yData),np.std(xData),np.std(yData)]
+
     def GetMeanValues(self):
         
         for i,values in enumerate(self.nStripHits):
@@ -105,6 +131,7 @@ class PlotHandler():
             else:
                 self.meanModuleHitPos.append([None,None])
 
+        '''
         print("MeanStripsFiredPerLayer")
         for i,value in enumerate(self.meanStripsFiredPerLayer):
             print(i,value)
@@ -127,6 +154,7 @@ class PlotHandler():
         print("Mean Hit Position (Module)")
         for i,value in enumerate(self.meanModuleHitPos):
             print(i,value)
+        '''
 
     def PlotStripData(self):
         fig=plt.figure(figsize=self.figsize,dpi=self.dpi)
