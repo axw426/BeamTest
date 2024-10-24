@@ -29,35 +29,42 @@ class BeamTestUi(QMainWindow):
         self.widget.setMaximumWidth(QApplication.primaryScreen().size().width()) #set maximum display width to be screen size to avoid scrolling
 
         self.fileName=""
+        self.plotHandler=PlotHandler()
+
 
         #create tabs
         self.tabs = QTabWidget()
         self.stripsTab = QWidget()
         self.moduleTab = QWidget()
         self.timingTab = QWidget() 
+        self.otherTab = QWidget() 
 
         # Add tabs
         self.tabs.addTab(self.stripsTab,"Strip Hits")
         self.tabs.addTab(self.moduleTab,"Module Hits")
         self.tabs.addTab(self.timingTab,"Timing Info")
+        self.tabs.addTab(self.otherTab,"Other")
   
         self.generalLayout = QGridLayout()
         self.widget.setLayout(self.generalLayout)
-        self.timingTabLayout = QGridLayout()
-        self.timingTab.setLayout(self.timingTabLayout)
         self.stripTabLayout = QGridLayout()
         self.stripsTab.setLayout(self.stripTabLayout)
         self.moduleTabLayout = QGridLayout()
         self.moduleTab.setLayout(self.moduleTabLayout) 
+        self.timingTabLayout = QGridLayout()
+        self.timingTab.setLayout(self.timingTabLayout)
+        self.otherTabLayout = QGridLayout()
+        self.otherTab.setLayout(self.otherTabLayout)
 
         self.setCentralWidget(self.widget)
         
         # Create all sections
         self.CreateMenuBar()
         self.CreateOptions()
-        self.CreateTimingTab()
         self.CreateStripsTab()
         self.CreateModulesTab()
+        self.CreateTimingTab()
+        self.CreateOtherTab()
 
 
         self.generalLayout.addLayout(self.optionsLayout,0,0)
@@ -85,7 +92,7 @@ class BeamTestUi(QMainWindow):
         fileMenu.addAction(self.loadAction)
 
     def SetStatus(self,colour,text=None):
-        self.analyseButtom.setStyleSheet(f"background-color: {colour}")
+        self.analyseButtom.setStyleSheet(f"background-color: {colour};border : 2px solid black; padding-top: 15px; padding-bottom: 15px; padding-left: 5px; padding-right: 5px")
         if text is not None:
             self.outputStatus.setText(text)
 
@@ -97,15 +104,18 @@ class BeamTestUi(QMainWindow):
         self.startInput.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
         self.maxEventsInput=LabelledEdit("Max Events (0=no max)","0")
         self.maxEventsInput.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
-        self.refreshRate=LabelledEdit("Update plots every N events (0=end)","0")
+        self.refreshRate=LabelledEdit("Update plots every N events (0=end)","1000")
         self.refreshRate.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
         self.selectFile=QPushButton("Select File",self)
         self.selectFile.setMaximumWidth(100)
         self.selectFile.clicked.connect(self.loadFile)
 
         self.outputStatus=QLabel("Please select an input file")
+        self.outputStatus.setWordWrap(True)
         self.analyseButtom=QPushButton("Run Analysis",self)
-        self.analyseButtom.setStyleSheet("border : 20px solid black;")
+        #newFont=QtGui.QFont(self.analyseButtom.font())
+        #newFont.setPointSize(30)
+        #self.analyseButtom.setFont(newFont)
         #self.analyseButtom.setMinimumSize(80,80)
         #self.analyseButtom.setMaximumWidth(100)
         self.SetStatus("red")
@@ -127,19 +137,34 @@ class BeamTestUi(QMainWindow):
         self.optionsLayout.setColumnMinimumWidth(2,80)
         self.optionsLayout.setColumnStretch(8,10)
 
+    def CreateOtherTab(self):
+        temp=QLabel("Will add things like subsampling info here")
+        self.otherTabLayout.addWidget(temp,0,0)
+
     def CreateTimingTab(self):
+    
+        self.timingPlots=[]
+        for i in range(16):
+            self.timingPlots.append(StripPlotObject(xLabel="Clock Cycle",showMean=True))
 
-        #want some timing plots
-        #median number of hits as a function of time in  each module
+        for i in range(4):
+            label=QLabel(f"<b>Module {i}</b>")
+            label.setAlignment(Qt.AlignCenter)
+            self.timingTabLayout.addWidget(label,0,i+1)
 
-        pass
+        for i,value in enumerate(["XY","YX","U","V"]):
+            label=QLabel(f"<b>{value}</b>")
+            label.setAlignment(Qt.AlignCenter)
+            self.timingTabLayout.addWidget(label,i+1,0)
 
-        
+        for i in range(16):
+            self.timingTabLayout.addWidget(self.timingPlots[i].plot_graph,i%4+1,(int)(i/4)+1)
+     
     def CreateStripsTab(self):
         
         self.stripPlots=[]
         for i in range(16):
-            self.stripPlots.append(StripPlotObject())
+            self.stripPlots.append(StripPlotObject(xLabel="Strip Number"))
 
         for i in range(4):
             label=QLabel(f"<b>Module {i}</b>")
@@ -165,17 +190,17 @@ class BeamTestUi(QMainWindow):
             self.modulePlots.append(ModulePlotObject(f"<b>Module {i}</b>"))
         
         #layout
-        self.moduleTabLayout.addLayout(self.hitTypeChoice.layout,0,1,1,2)
+        self.moduleTabLayout.addLayout(self.hitTypeChoice.layout,1,1,1,2)
         for i in range(4):
-            self.moduleTabLayout.addLayout(self.modulePlots[i].layout,(int)(i/2)+1,i%2+1)
-        self.moduleTabLayout.setRowStretch(0,5)
-        self.moduleTabLayout.setRowStretch(1,10)
-        self.moduleTabLayout.setRowStretch(2,10)
+            self.moduleTabLayout.addLayout(self.modulePlots[i].layout,(int)(i/2)+3,i%2+1)
+        self.moduleTabLayout.setRowStretch(0,2)
+        self.moduleTabLayout.setRowStretch(2,2)
+        self.moduleTabLayout.setRowStretch(3,10)
+        self.moduleTabLayout.setRowStretch(4,10)
   
-
     def loadFile(self):
 
-        self.fileName = QFileDialog.getOpenFileName(self, 'Open File',filter="bin (*.bin);")[0]
+        self.fileName = QFileDialog.getOpenFileName(self, 'Open File',filter="Binary files (*.bin)")[0]
         self.fileInput.SetValue(self.fileName)
 
         fSize=os.path.getsize(self.fileName)
@@ -218,6 +243,10 @@ class BeamTestUi(QMainWindow):
                     reader.event.Print()
 
                 self.plotHandler.AddEvent(reader.event)
+                counter+=1
+
+                if(self.maxEvents>0 and counter>self.maxEvents):
+                    break
 
                 if refreshRateValue>0 and counter%refreshRateValue==0:
                     self.SetStatus("orange",f"Running analysis, processed {counter}/{self.nEventsInFile-self.start}")
@@ -225,9 +254,7 @@ class BeamTestUi(QMainWindow):
                     self.UpdatePlots()
                     QApplication.processEvents() #updates GUI while in the loop
 
-                counter+=1
-                if(self.maxEvents>0 and counter>self.maxEvents):
-                    break
+
 
             #Extract Useful Info
             self.plotHandler.GetMeanValues()
@@ -240,19 +267,18 @@ class BeamTestUi(QMainWindow):
             print(error)
             self.SetStatus("red","Analysis failed! Please check options are valid")
 
-    
     def UpdatePlots(self):
         
         start=time.time()
         for i in range(16):
             self.stripPlots[i].Plot(self.plotHandler.GetStripHistogram(i))
+            self.timingPlots[i].Plot(self.plotHandler.GetTimingHistogram(i))
 
         for i in range(4):
             self.modulePlots[i].Plot(self.plotHandler.GetModuleData(i,self.hitTypeChoice.GetValue()))
 
         print("Updating plots took ",time.time()-start)
 
-# Client code
 def main():
     """Main function."""
     # Create an instance of QApplication

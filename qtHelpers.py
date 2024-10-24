@@ -4,6 +4,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5 import QtGui
 from PyQt5.QtCore import QFile, QTextStream, pyqtSignal
 import pyqtgraph as pg
+import numpy as np
 
 
 class LabelledEdit:
@@ -47,17 +48,29 @@ class LabelledCombo:
         return self.value.currentText()
 
 class StripPlotObject():
-    def __init__(self):
+    def __init__(self,xLabel="",yLabel="",showMean=False):
         self.xData=[]
         self.yData=[]
+        self.showMean=showMean
 
         self.plot_graph = pg.PlotWidget()
+        if(xLabel!=""):
+            self.plot_graph.plotItem.getAxis("bottom").setLabel(xLabel)
+        if(yLabel!=""):
+            self.plot_graph.plotItem.getAxis("left").setLabel(yLabel)
         #self.plot_graph.setMaximumHeight(250)
 
 
     def Plot(self,data):
         self.plot_graph.clear()
         self.plot_graph.plot(data[0],data[1],stepMode=True)
+        if self.showMean: 
+            mean=np.mean(data[1])
+            self.text = pg.TextItem(f"Mean= {mean: .2f}")
+            self.plot_graph.addItem(self.text)
+            self.text.setPos(0,9)
+
+
 
 
 class ModulePlotObject():
@@ -101,13 +114,20 @@ class ModulePlotObject():
 
     def Plot(self,data):
 
-        histData=data[0]
+        self.plot_graph.clear()
 
-        x0, x1 = (-180, 180)
-        y0, y1 = (-30, 30)
-        xscale = (x1-x0)/histData[0].shape[0]
-        yscale = (y1-y0)/histData[0].shape[1]
-        self.plot_graph.setImage(histData[0],pos=[x0,y0], scale=[xscale, yscale])
+        if data is not None:
+            histData=data[0]
 
-        self.means.setText(f"x={data[1]: .3f}, y={data[2]: .3f}")
-        self.std.setText(f"x={data[3]: .3f}, y={data[4]: .3f}")
+            x0, x1 = (-180, 180)
+            y0, y1 = (-30, 30)
+            xscale = (x1-x0)/histData[0].shape[0]
+            yscale = (y1-y0)/histData[0].shape[1]
+            self.plot_graph.setImage(histData[0],pos=[x0,y0], scale=[xscale, yscale])
+
+            self.means.setText(f"x={data[1]: .3f}, y={data[2]: .3f}")
+            self.std.setText(f"x={data[3]: .3f}, y={data[4]: .3f}")
+
+        else:
+            self.means.setText("Data is empty")
+            self.std.setText("Data is empty")            

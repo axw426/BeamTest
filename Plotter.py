@@ -13,6 +13,7 @@ matplotlib.use('agg')
 # - hit location in each module -DONE
 # - distribution of number of hits per clock  -DONE
 # - time of hit within subsample?
+# - number of hits per clock cycle
 
 #basic info
 # - mean hit position per module- DONE
@@ -88,6 +89,11 @@ class PlotHandler():
         y,x = np.histogram(data, bins=[x-0.5 for x in range(1536)])
         return [x,y]
     
+    def GetTimingHistogram(self,layer):
+        y=self.nStripHits[layer]
+        x=[i for i in range(len(y)+1)]
+        return [x,y]
+    
     def GetModuleData(self,module,hitType):
         if(hitType=="XY Only"):
             rawData=self.xyHits[module]
@@ -104,7 +110,10 @@ class PlotHandler():
 
         hist= np.histogram2d(xData, yData, bins=[360,60], range=[[-180,180],[-30,30]], density=None, weights=None)
 
-        return [hist,np.mean(xData),np.mean(yData),np.std(xData),np.std(yData)]
+        if len(xData)>0:
+            return [hist,np.mean(xData),np.mean(yData),np.std(xData),np.std(yData)]
+        else:
+            return None
 
     def GetMeanValues(self):
         
