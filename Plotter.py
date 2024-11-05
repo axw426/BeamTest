@@ -2,22 +2,7 @@ from Event import EventData
 import statistics 
 import matplotlib.pyplot as plt
 from pathlib import Path
-import matplotlib
 import numpy as np
-
-matplotlib.use('agg') 
-
-#plots we want
-# - histogram of strips fired in each layer -DONE
-# - hit location in each sensor board -DONE
-# - hit location in each module -DONE
-# - distribution of number of hits per clock  -DONE
-# - time of hit within subsample?
-# - number of hits per clock cycle
-
-#basic info
-# - mean hit position per module- DONE
-# - mean number of hits per layer/module- DONE
 
 class PlotHandler():
 

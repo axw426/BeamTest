@@ -15,7 +15,6 @@ class FileReader:
 
         nInts=(self.nHitsPerLayer*self.nTrackers*self.nLayersPerTracker)
         self.lengthOfEntry=2*(nInts)+2*(nCaloBins)+4*3+4
-        #print("LoE",self.lengthOfEntry)
         
         self.event=0
 
@@ -45,7 +44,9 @@ class FileReader:
                 strips=self.rawData[layer*self.nHitsPerLayer:(layer+1)*self.nHitsPerLayer]
                 strips=[x for x in strips if x!=-1] #remove empty address
                 allStrips.append(strips)
-            self.event=EventData(self.rawData,allStrips)
+            
+            #the important bit: EventData object takes an array of 16 arrays each containing the valid strip addresses for each of the 16 layers
+            self.event=EventData(allStrips) 
             yield 
 
     def PrintEvent(self) -> None:

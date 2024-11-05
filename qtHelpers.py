@@ -4,8 +4,10 @@ from PyQt5.QtGui import QIcon
 from PyQt5 import QtGui
 from PyQt5.QtCore import QFile, QTextStream, pyqtSignal
 import pyqtgraph as pg
+import pyqtgraph.exporters
 import numpy as np
 
+#this file is simply used to create handy classes for grouping visual elements
 
 class LabelledEdit:
     def __init__(self, label, defaultText="",maxWidth=200,minWidth=400):
@@ -71,7 +73,14 @@ class StripPlotObject():
             self.text.setPos(0,9)
 
 
+    def Save(self,directory,layer,label):
+        exporter = pg.exporters.ImageExporter(self.plot_graph.plotItem)
+        
+        # set export parameters if needed
+        exporter.parameters()['width'] = 1000   # (note this also affects height parameter)
 
+        # save to file
+        exporter.export(f"{directory}/{label}_Layer{layer}.png")
 
 class ModulePlotObject():
     def __init__(self,name):
@@ -80,10 +89,10 @@ class ModulePlotObject():
 
         #self.label=QLabel(name)
 
-        plot=pg.PlotItem()
-        plot.getAxis("bottom").setLabel("X","cm")
-        plot.getAxis("left").setLabel("Y","cm")
-        self.plot_graph = pg.ImageView(view=plot)
+        self.plot=pg.PlotItem()
+        self.plot.getAxis("bottom").setLabel("X","cm")
+        self.plot.getAxis("left").setLabel("Y","cm")
+        self.plot_graph = pg.ImageView(view=self.plot)
         self.plot_graph.view.invertY(False)
         self.plot_graph.view.setLimits(xMin = -180, yMin = -30,xMax=180,yMax=30)
         # Set a small padding to avoid the number form cutting off the edge
@@ -131,3 +140,12 @@ class ModulePlotObject():
         else:
             self.means.setText("Data is empty")
             self.std.setText("Data is empty")            
+
+    def Save(self,directory,module):
+        exporter = pg.exporters.ImageExporter(self.plot)
+        
+        # set export parameters if needed
+        exporter.parameters()['width'] = 1000   # (note this also affects height parameter)
+
+        # save to file
+        exporter.export(f"{directory}/ModuleHits_Module{module}.png")

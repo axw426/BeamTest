@@ -1,6 +1,5 @@
 class EventData():
-    def __init__(self,rawData: list, stripData: list):
-        self.rawData=rawData 
+    def __init__(self,stripData: list):
 
         #the useful info produced
         self.stripAddresses=stripData #vector of length 16 of strips fired in each layer 
@@ -116,6 +115,7 @@ class EventData():
 
             #Combine XY and UV hits
             hits=[]
+            #uncomment to treat 2 layer hits in first two modules as a full module hit
             #if(i==0): #UV module
             #    hits=self.uvHits[-1]
             #elif(i==1): #XY module
