@@ -194,7 +194,7 @@ class BeamTestUi(QMainWindow):
         #Shows hit map for each module (XY,UV, Full module)
         
         #create option dialogues
-        self.hitTypeChoice=LabelledCombo("Hit Type",["Full Module","XY Only","UV Only"])
+        self.hitTypeChoice=LabelledCombo("Hit Type",["Full Module","Full Module (2 layer hits allowed)","XY Only","UV Only"])
         self.hitTypeChoice.value.currentIndexChanged.connect(self.UpdatePlots)
 
         #create plot objects

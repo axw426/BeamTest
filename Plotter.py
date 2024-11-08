@@ -92,6 +92,17 @@ class PlotHandler():
             rawData=self.moduleHits[module]
             xData=[data[0] for data in rawData]
             yData=[data[1] for data in rawData]
+        if(hitType=="Full Module (2 layer hits allowed)"):
+            if module==0:
+                xData=[data[0] for data in self.uvHits[module]]
+                yData=[data[1] for data in self.uvHits[module]]
+            elif module==1:
+                xData=[data[0] for data in self.xyHits[module]]
+                yData=[data[1] for data in self.xyHits[module]]
+            else:
+                xData=[data[0] for data in self.moduleHits[module]]
+                yData=[data[1] for data in self.moduleHits[module]]
+
 
         hist= np.histogram2d(xData, yData, bins=[360,60], range=[[-180,180],[-30,30]], density=None, weights=None)
 
