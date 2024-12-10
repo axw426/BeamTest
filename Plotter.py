@@ -27,6 +27,10 @@ class PlotHandler():
         self.meanModuleHitPos=[]
 
         self.nClocks=0
+        self.missingClocks=[]
+
+        self.subSamples=[[] for i in range (16)]
+
         
         self.outputDirectory="Plots"
 
@@ -43,6 +47,11 @@ class PlotHandler():
     def AddEvent(self,event: EventData):
 
         self.nClocks+=1
+        self.missingClocks.append(event.emptyClocks)
+
+        for i in range(self.missingClocks[-1]):
+            for layer in range(16):
+                self.nStripHits[layer].append(0)
 
         #strip addresses
         for i,layer in enumerate(event.stripAddresses):
@@ -68,6 +77,11 @@ class PlotHandler():
             for hit in module:
                 self.moduleHits[i].append(hit)
 
+        for layer, samples in enumerate(event.subSamples):
+            for sample in samples:
+                for i in range(8):
+                    if sample & i:
+                        self.subSamples[layer].append(i)
 
     def GetStripHistogram(self,layer):
         data=self.stripAddresses[layer]
@@ -77,6 +91,11 @@ class PlotHandler():
     def GetTimingHistogram(self,layer):
         y=self.nStripHits[layer]
         x=[i for i in range(len(y)+1)]
+        return [x,y]
+    
+    def GetSubSampleHistogram(self,layer):
+        data=self.subSamples[layer]
+        y,x=np.histogram(data,bins=[x-0.5 for x in range(9)])
         return [x,y]
     
     def GetModuleData(self,module,hitType):

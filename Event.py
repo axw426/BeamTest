@@ -1,8 +1,11 @@
 class EventData():
-    def __init__(self,stripData: list):
+    def __init__(self, stripData: list, allSamples: list, emptyClockCounter: int):
 
         #the useful info produced
         self.stripAddresses=stripData #vector of length 16 of strips fired in each layer 
+        self.subSamples=allSamples
+
+        self.emptyClocks=emptyClockCounter
         self.xyHits=[] #vector of length 4 of hits in each XY sensor board
         self.uvHits=[] #vector of length 4 of hits in each UV sensor board
         self.moduleHits=[] #vector of length 4 of hits in each full module

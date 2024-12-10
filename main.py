@@ -10,6 +10,7 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import QFile, QTextStream, pyqtSignal
 
 from qtHelpers import *
+#from BinaryReader_Simulated import FileReader
 from BinaryReader import FileReader
 from Plotter import PlotHandler
 from pathlib import Path
@@ -33,13 +34,13 @@ class BeamTestUi(QMainWindow):
         self.stripsTab = QWidget()
         self.moduleTab = QWidget()
         self.timingTab = QWidget() 
-        self.otherTab = QWidget() 
+        self.subSampleTab = QWidget() 
 
         # Add tabs
         self.tabs.addTab(self.stripsTab,"Strip Hits")
         self.tabs.addTab(self.moduleTab,"Module Hits")
         self.tabs.addTab(self.timingTab,"Timing Info")
-        self.tabs.addTab(self.otherTab,"Other")
+        self.tabs.addTab(self.subSampleTab,"SubSamples")
   
         self.generalLayout = QGridLayout()
         self.widget.setLayout(self.generalLayout)
@@ -49,8 +50,8 @@ class BeamTestUi(QMainWindow):
         self.moduleTab.setLayout(self.moduleTabLayout) 
         self.timingTabLayout = QGridLayout()
         self.timingTab.setLayout(self.timingTabLayout)
-        self.otherTabLayout = QGridLayout()
-        self.otherTab.setLayout(self.otherTabLayout)
+        self.subSampleTabLayout = QGridLayout()
+        self.subSampleTab.setLayout(self.subSampleTabLayout)
 
         self.setCentralWidget(self.widget)
         
@@ -64,7 +65,7 @@ class BeamTestUi(QMainWindow):
         self.CreateStripsTab()
         self.CreateModulesTab()
         self.CreateTimingTab()
-        self.CreateOtherTab()
+        self.CreateSubSampleTab()
 
         self.generalLayout.addLayout(self.optionsLayout,0,0)
         self.generalLayout.addWidget(self.tabs,1,0)
@@ -138,10 +139,6 @@ class BeamTestUi(QMainWindow):
         self.optionsLayout.setColumnMinimumWidth(2,80)
         self.optionsLayout.setColumnStretch(8,10)
 
-    def CreateOtherTab(self):
-        temp=QLabel("Will add things like subsampling info here")
-        self.otherTabLayout.addWidget(temp,0,0)
-
     def CreateTimingTab(self):
         #Tab showing hits as a function of time for each layer
 
@@ -211,13 +208,38 @@ class BeamTestUi(QMainWindow):
         self.moduleTabLayout.setRowStretch(3,10)
         self.moduleTabLayout.setRowStretch(4,10)
   
+    def CreateSubSampleTab(self):
+        #Tab showing hits as a function of time for each layer
+
+        #create plot objects
+        self.subSamplePlots=[]
+        for i in range(16):
+            self.subSamplePlots.append(StripPlotObject(xLabel="Sub sample",showMean=True))
+
+        #add labels
+        for i in range(4):
+            label=QLabel(f"<b>Module {i}</b>")
+            label.setAlignment(Qt.AlignCenter)
+            self.subSampleTabLayout.addWidget(label,0,i+1)
+
+        for i,value in enumerate(["nHits\n XY","nHits\n YX","nHits\n U","nHits\n V"]):
+            label=QLabel(f"<b>{value}</b>")
+            label.setWordWrap(True)
+            label.setAlignment(Qt.AlignCenter)
+            self.subSampleTabLayout.addWidget(label,i+1,0)
+
+        #add objects to the layout
+        for i in range(16):
+            self.subSampleTabLayout.addWidget(self.subSamplePlots[i].plot_graph,i%4+1,(int)(i/4)+1)
+
     def loadFile(self):
         self.fileName = QFileDialog.getOpenFileName(self, 'Open File',filter="Binary files (*.bin)")[0]
+        #self.fileName = QFileDialog.getOpenFileName(self, 'Open File')[0]
         self.fileInput.SetValue(self.fileName)
 
         fSize=os.path.getsize(self.fileName)
-        headerSize=0
-        lengthOfEntry=200
+        headerSize=4096
+        lengthOfEntry=56
         self.nEventsInFile=(int)((fSize-headerSize)/lengthOfEntry)
         self.nEventsInFileLabel.setText(f"Events in File= {self.nEventsInFile}")
 
@@ -227,6 +249,7 @@ class BeamTestUi(QMainWindow):
         for layer in range(16):
             self.stripPlots[layer].Save(self.outputDir,layer,"StripNumber")
             self.timingPlots[layer].Save(self.outputDir,layer,"HitsPerClockCycle")
+            self.subSamplePlots[layer].Save(self.outputDir,layer,"SubSample")
 
         for module in range(4):
             self.modulePlots[module].Save(self.outputDir,module)
@@ -294,6 +317,7 @@ class BeamTestUi(QMainWindow):
         for i in range(16):
             self.stripPlots[i].Plot(self.plotHandler.GetStripHistogram(i))
             self.timingPlots[i].Plot(self.plotHandler.GetTimingHistogram(i))
+            self.subSamplePlots[i].Plot(self.plotHandler.GetSubSampleHistogram(i))
 
         for i in range(4):
             self.modulePlots[i].Plot(self.plotHandler.GetModuleData(i,self.hitTypeChoice.GetValue()))
