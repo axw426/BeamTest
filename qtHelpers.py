@@ -66,11 +66,16 @@ class StripPlotObject():
     def Plot(self,data):
         self.plot_graph.clear()
         self.plot_graph.plot(data[0],data[1],stepMode=True)
+        ymedian=np.mean(data[1])
+        product=[x*y for x,y in zip(data[0],data[1])]
+        ymean=0.0
+        if(sum(data[1])>0):
+            ymean=sum(product)/sum(data[1])
         if self.showMean: 
             mean=np.mean(data[1])
-            self.text = pg.TextItem(f"Mean= {mean: .2f}")
+            self.text = pg.TextItem(f"Mean= {ymean: .2f}")
             self.plot_graph.addItem(self.text)
-            self.text.setPos(0,9)
+            self.text.setPos(0,ymedian)
 
 
     def Save(self,directory,layer,label):

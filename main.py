@@ -108,7 +108,7 @@ class BeamTestUi(QMainWindow):
         self.startInput.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
         self.maxEventsInput=LabelledEdit("Max Events (0=no max)","0")
         self.maxEventsInput.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
-        self.refreshRate=LabelledEdit("Update plots every N events (0=end)","1000")
+        self.refreshRate=LabelledEdit("Update plots every N events (0=end)","0")
         self.refreshRate.value.textChanged.connect(lambda: self.SetStatus("orange","Options changed, hit run analysis..."))
         self.selectFile=QPushButton("Select File",self)
         self.selectFile.setMaximumWidth(100)
@@ -233,15 +233,24 @@ class BeamTestUi(QMainWindow):
             self.subSampleTabLayout.addWidget(self.subSamplePlots[i].plot_graph,i%4+1,(int)(i/4)+1)
 
     def loadFile(self):
+
+        start=time.time()
         self.fileName = QFileDialog.getOpenFileName(self, 'Open File',filter="Binary files (*.bin)")[0]
         #self.fileName = QFileDialog.getOpenFileName(self, 'Open File')[0]
         self.fileInput.SetValue(self.fileName)
 
-        fSize=os.path.getsize(self.fileName)
-        headerSize=4096
-        lengthOfEntry=56
-        self.nEventsInFile=(int)((fSize-headerSize)/lengthOfEntry)
+
+        reader=FileReader(self.fileName, 0)
+        self.nEventsInFile=reader.CountEvents()
         self.nEventsInFileLabel.setText(f"Events in File= {self.nEventsInFile}")
+
+        print("File Reader took ",time.time()-start)
+
+        #fSize=os.path.getsize(self.fileName)
+        #headerSize=0
+        #lengthOfEntry=52
+        #self.nEventsInFile=(int)((fSize-headerSize)/lengthOfEntry)
+        #self.nEventsInFileLabel.setText(f"Events in File= {self.nEventsInFile}")
 
     
     def savePlots(self):
@@ -280,6 +289,9 @@ class BeamTestUi(QMainWindow):
             counter=0
             for event in reader.GetNextEvent():
                 
+                if(counter%1000==0):
+                    print("Event= ",counter)
+                
                 if(self.debug):
                     print("Event",counter)
                     reader.event.Print()
@@ -288,7 +300,7 @@ class BeamTestUi(QMainWindow):
                 self.plotHandler.AddEvent(reader.event)
                 counter+=1
 
-                if(self.maxEvents>0 and counter>self.maxEvents):
+                if(self.maxEvents>0 and counter>=self.maxEvents):
                     break
 
                 #update plots at user defined interval
@@ -316,7 +328,7 @@ class BeamTestUi(QMainWindow):
         start=time.time()
         for i in range(16):
             self.stripPlots[i].Plot(self.plotHandler.GetStripHistogram(i))
-            self.timingPlots[i].Plot(self.plotHandler.GetTimingHistogram(i))
+            #self.timingPlots[i].Plot(self.plotHandler.GetTimingHistogram(i))
             self.subSamplePlots[i].Plot(self.plotHandler.GetSubSampleHistogram(i))
 
         for i in range(4):
